@@ -1,89 +1,143 @@
 import { NextRequest } from "next/server";
-import { buildItineraryPrompt } from "@/lib/itineraryPrompt";
+import { buildSchedulePrompt, buildBudgetPrompt, buildTipsPrompt, mergeItineraryParts } from "@/lib/itineraryPrompt";
 import { UserSelections } from "@/lib/types";
 import axios from 'axios';
 
-// Use Edge Runtime for improved performance with streaming
+// Use Edge Runtime for improved performance
 export const runtime = 'edge';
+export const maxDuration = 60; // 60 seconds
+
+async function callGeminiAPI(prompt: string, temperature: number = 0.3, maxTokens: number = 2048) {
+  const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+  if (!API_KEY) {
+    throw new Error("Gemini API key is not configured");
+  }
+  
+  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;
+  
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: maxTokens
+    }
+  };
+  
+  const response = await axios({
+    url: apiUrl,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    params: { key: API_KEY },
+    data: payload
+  });
+  
+  const text = response.data.candidates[0].content.parts[0].text;
+  const jsonMatch = text.match(/{[\s\S]*}/);
+  
+  if (!jsonMatch) {
+    throw new Error("Invalid response format from Gemini API");
+  }
+  
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    console.error("Error parsing JSON:", error);
+    throw new Error("Failed to parse JSON from Gemini API");
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse the request body
     const userSelections: UserSelections = await request.json();
     
-    // Create a new ReadableStream to stream the response
+    // Create a new ReadableStream for streaming the response
+    const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Build the prompt for Gemini API
-          const promptText = buildItineraryPrompt(userSelections);
+          // Phase 1: Generate the schedule (most important part)
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "schedule", 
+            message: "Generating your daily itinerary..." 
+          }) + "\n"));
           
-          // Get API key
-          const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-          if (!API_KEY) {
-            throw new Error("Gemini API key is not configured");
-          }
+          const schedulePrompt = buildSchedulePrompt(userSelections);
+          const schedulePart = await callGeminiAPI(schedulePrompt, 0.3, 2048);
           
-          // Construct API URL - Use Gemini 1.5 Flash for faster response
-          const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;
+          // Send schedule progress
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "schedule_complete", 
+            data: schedulePart 
+          }) + "\n"));
           
-          // Build payload
-          const payload = {
-            contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: {
-              temperature: 0.4,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 8192
-            }
-          };
+          // Phase 2: Generate the budget based on the schedule
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "budget", 
+            message: "Creating your budget breakdown..." 
+          }) + "\n"));
           
-          // Make the API call
-          const response = await axios({
-            url: apiUrl,
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            params: { key: API_KEY },
-            data: payload
-          });
+          const budgetPrompt = buildBudgetPrompt(userSelections, schedulePart.schedule);
+          const budgetPart = await callGeminiAPI(budgetPrompt, 0.3, 1024);
           
-          // Extract the text response and parse JSON
-          const text = response.data.candidates[0].content.parts[0].text;
-          const jsonMatch = text.match(/{[\s\S]*}/);
+          // Send budget progress
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "budget_complete", 
+            data: budgetPart 
+          }) + "\n"));
           
-          if (!jsonMatch) {
-            throw new Error("Invalid response format");
-          }
+          // Phase 3: Generate local tips
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "tips", 
+            message: "Finding local tips and recommendations..." 
+          }) + "\n"));
           
-          const itineraryResult = JSON.parse(jsonMatch[0]);
+          const tipsPrompt = buildTipsPrompt(userSelections);
+          const tipsPart = await callGeminiAPI(tipsPrompt, 0.4, 1024);
           
-          // Send only the final result
-          controller.enqueue(encoder.encode(JSON.stringify(itineraryResult)));
+          // Send tips progress
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "tips_complete", 
+            data: tipsPart 
+          }) + "\n"));
           
-          // Close the stream
+          // Phase 4: Merge all parts into a complete itinerary
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "merging", 
+            message: "Finalizing your itinerary..." 
+          }) + "\n"));
+          
+          const completeItinerary = mergeItineraryParts(schedulePart, budgetPart, tipsPart, userSelections);
+          
+          // Send the final result
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "complete", 
+            data: completeItinerary 
+          }) + "\n"));
+          
           controller.close();
         } catch (error: any) {
-          // Send error message to client
-          controller.enqueue(encoder.encode(JSON.stringify({
-            error: error.message || "Failed to generate itinerary"
-          })));
+          controller.enqueue(encoder.encode(JSON.stringify({ 
+            step: "error", 
+            error: error.message || "Failed to generate itinerary" 
+          }) + "\n"));
           controller.close();
         }
       }
     });
     
-    // Return a streaming response
     return new Response(stream, {
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
     });
     
   } catch (error: any) {
-    // Handle initial errors before streaming begins
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error occurred" }),
+      JSON.stringify({ error: error.message || "Failed to process request" }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -91,6 +145,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// Text encoder for the stream
-const encoder = new TextEncoder();
