@@ -1,10 +1,10 @@
 import { UserSelections, ItineraryResult } from "./types";
 
 /**
- * Builds a structured prompt for the Gemini API based on user selections
+ * Builds a structured prompt for generating the schedule part of the itinerary
  */
-export function buildItineraryPrompt(selections: UserSelections): string {
-  const { destination, selectedActivities, selectedStay, selectedTransport, selectedSocialSpots, preferences } = selections;
+export function buildSchedulePrompt(selections: UserSelections): string {
+  const { destination, selectedActivities, selectedStay, selectedTransport, preferences } = selections;
   
   // Calculate trip duration in days
   const startDate = new Date(preferences.startDate);
@@ -17,12 +17,12 @@ export function buildItineraryPrompt(selections: UserSelections): string {
     if (!activitiesByCategory[activity.category]) {
       activitiesByCategory[activity.category] = [];
     }
-    activitiesByCategory[activity.category].push(`${activity.name}: ${activity.description}`);
+    activitiesByCategory[activity.category].push(activity.name);
   });
   
-  // Format the prompt
-  const prompt = `
-You are a professional travel guide specializing in backpacker and budget-friendly travel planning. Create a detailed ${tripDuration}-day itinerary for ${destination} based on the following selected options and preferences.
+  // Format the prompt for schedule generation
+  return `
+Generate ONLY a daily schedule for a ${tripDuration}-day travel itinerary for ${destination}.
 
 TRIP DETAILS:
 - Destination: ${destination}
@@ -30,112 +30,234 @@ TRIP DETAILS:
 - Budget Level: ${preferences.budgetLevel}
 - Travel Style: ${preferences.travelStyle}
 - Interests: ${preferences.interests.join(', ')}
-${preferences.dietaryRestrictions ? `- Dietary Restrictions: ${preferences.dietaryRestrictions.join(', ')}` : ''}
-${preferences.additionalNotes ? `- Additional Notes: ${preferences.additionalNotes}` : ''}
-
-SELECTED ACCOMMODATION:
-${selectedStay ? `- ${selectedStay.name}: ${selectedStay.description} (${selectedStay.price})` : '- No specific accommodation selected. Please recommend good backpacker options.'}
-
-SELECTED TRANSPORTATION OPTIONS:
-${selectedTransport.map(t => `- ${t.type}: ${t.description} (${t.cost})`).join('\n')}
 
 SELECTED ACTIVITIES:
 ${Object.entries(activitiesByCategory).map(([category, activities]) => 
-  `${category}:\n${activities.map(a => `- ${a}`).join('\n')}`
-).join('\n\n')}
+  `- ${category}: ${activities.join(', ')}`
+).join('\n')}
 
-SELECTED SOCIAL SPOTS:
-${selectedSocialSpots.map(spot => `- ${spot.name} (${spot.type}): ${spot.description}`).join('\n')}
+ACCOMMODATION:
+${selectedStay ? `${selectedStay.name}` : 'Budget backpacker options'}
 
-Based on these selections, please create a comprehensive backpacker-friendly itinerary that includes:
+TRANSPORTATION OPTIONS:
+${selectedTransport.map(t => t.type).join(', ')}
 
-1. DAILY SCHEDULE: Create a day-by-day plan with times, activities, locations, and estimated costs.
-2. BUDGET BREAKDOWN: Provide a detailed budget for accommodation, food, activities, transportation, and miscellaneous expenses.
-3. PACKING RECOMMENDATIONS: List essential items to bring for this trip.
-4. LOCAL TIPS: Include hidden gems, cultural tips, and safety advice.
-5. TRANSPORTATION PLAN: How to get around efficiently (including to/from activities).
+Create a day-by-day schedule with times, activities, locations, and estimated costs.
+Each day should include morning, afternoon, and evening activities.
+Make it realistic for a backpacker with the specified budget level.
 
-Format the response as a structured JSON object matching this TypeScript interface:
-\`\`\`typescript
-interface ItineraryResult {
-  destination: string;
-  summary: string;
-  schedule: Array<{
-    date: string;
-    activities: Array<{
-      time: string;
-      activity: string;
-      location?: string;
-      notes?: string;
-      cost?: string;
-    }>;
-  }>;
-  budget: {
-    accommodation: {
-      totalCost: string;
-      perNight: string;
-      details: string;
-    };
-    food: {
-      totalCost: string;
-      perDay: string;
-      details: string;
-    };
-    activities: {
-      totalCost: string;
-      details: string[];
-    };
-    transportation: {
-      totalCost: string;
-      details: string[];
-    };
-    miscellaneous: {
-      totalCost: string;
-      details: string[];
-    };
-    totalBudget: string;
-  };
-  packingList: Array<{
-    category: string;
-    items: string[];
-  }>;
-  localTips: Array<{
-    title: string;
-    description: string;
-    category: string;
-  }>;
-  transportRecommendations: string[];
+Return ONLY a valid JSON object in this exact format:
+{
+  "destination": "${destination}",
+  "summary": "Brief 1-2 sentence summary",
+  "schedule": [
+    {
+      "date": "YYYY-MM-DD",
+      "activities": [
+        {
+          "time": "08:00",
+          "activity": "Activity name",
+          "location": "Location name",
+          "cost": "$XX"
+        }
+      ]
+    }
+  ]
 }
-\`\`\`
-
-Return only the JSON object without any additional text.
 `;
-
-  return prompt;
 }
 
 /**
- * Parses and validates the Gemini API response
+ * Builds a structured prompt for generating the budget part of the itinerary
  */
-export function parseItineraryResponse(text: string): ItineraryResult {
-  try {
-    // Extract JSON from the response
-    const jsonMatch = text.match(/{[\s\S]*}/);
-    if (!jsonMatch) {
-      throw new Error("Invalid response format: No JSON object found");
-    }
-    
-    const jsonData = JSON.parse(jsonMatch[0]);
-    
-    // Validate the response has the expected structure
-    if (!jsonData.destination || !jsonData.schedule || !jsonData.budget) {
-      throw new Error("Invalid response structure: Missing required fields");
-    }
-    
-    // Return the parsed data
-    return jsonData as ItineraryResult;
-  } catch (error) {
-    console.error("Error parsing itinerary response:", error);
-    throw new Error("Failed to parse the generated itinerary");
+export function buildBudgetPrompt(selections: UserSelections, schedule: any): string {
+  const { destination, selectedStay, selectedTransport, preferences } = selections;
+  
+  // Calculate trip duration in days
+  const startDate = new Date(preferences.startDate);
+  const endDate = new Date(preferences.endDate);
+  const tripDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+  
+  return `
+Based on the following schedule for a ${tripDuration}-day trip to ${destination}, create a detailed budget breakdown.
+
+TRIP DETAILS:
+- Destination: ${destination}
+- Duration: ${tripDuration} days
+- Budget Level: ${preferences.budgetLevel}
+- Accommodation: ${selectedStay ? selectedStay.name : 'Budget backpacker options'}
+- Transportation: ${selectedTransport.map(t => t.type).join(', ')}
+
+SCHEDULE SUMMARY:
+${JSON.stringify(schedule, null, 2).substring(0, 500)}...
+
+Create a realistic budget breakdown for a backpacker with the specified budget level.
+Include costs for accommodation, food, activities, transportation, and miscellaneous expenses.
+
+Return ONLY a valid JSON object in this exact format:
+{
+  "budget": {
+    "accommodation": {
+      "totalCost": "$XXX",
+      "perNight": "$XX",
+      "details": "Brief explanation"
+    },
+    "food": {
+      "totalCost": "$XXX",
+      "perDay": "$XX",
+      "details": "Brief explanation"
+    },
+    "activities": {
+      "totalCost": "$XXX",
+      "details": ["Item 1: $XX", "Item 2: $XX"]
+    },
+    "transportation": {
+      "totalCost": "$XXX",
+      "details": ["Item 1: $XX", "Item 2: $XX"]
+    },
+    "miscellaneous": {
+      "totalCost": "$XXX",
+      "details": ["Item 1: $XX", "Item 2: $XX"]
+    },
+    "totalBudget": "$XXXX"
   }
+}
+`;
+}
+
+/**
+ * Builds a structured prompt for generating local tips for the itinerary
+ */
+export function buildTipsPrompt(selections: UserSelections): string {
+  const { destination, preferences } = selections;
+  
+  return `
+You are a travel expert specializing in ${destination}.
+Create a list of 5-7 helpful tips for a backpacker visiting ${destination}.
+
+TRAVELER PROFILE:
+- Budget Level: ${preferences.budgetLevel}
+- Travel Style: ${preferences.travelStyle}
+- Interests: ${preferences.interests.join(', ')}
+
+Focus on providing unique, specific insights about:
+- Local customs and etiquette
+- Safety tips
+- Money-saving advice
+- Transportation hacks
+- Food recommendations
+- Common tourist mistakes to avoid
+
+Return ONLY a valid JSON object in this exact format:
+{
+  "localTips": [
+    {
+      "title": "Tip title",
+      "description": "Detailed explanation of the tip (1-2 sentences)",
+      "category": "One of: Cultural, Safety, Food, Transportation, Money, Practical"
+    }
+  ],
+  "transportRecommendations": [
+    "Specific transportation tip 1",
+    "Specific transportation tip 2",
+    "Specific transportation tip 3"
+  ]
+}
+`;
+}
+
+/**
+ * Generate default packing list based on destination and preferences
+ */
+export function getDefaultPackingList(destination: string, preferences: any) {
+  // Basic packing list categories that apply to most destinations
+  const basicPackingList = [
+    {
+      category: "Documents",
+      items: [
+        "Passport and visa (if required)",
+        "Travel insurance documents",
+        "Booking confirmations",
+        "Emergency contacts",
+        "Backup ID",
+        "Credit/debit cards"
+      ]
+    },
+    {
+      category: "Clothing Essentials",
+      items: [
+        "Underwear and socks",
+        "T-shirts/tops",
+        "Lightweight pants/shorts",
+        "Comfortable walking shoes",
+        "Light jacket or sweater",
+        "Sleep clothes"
+      ]
+    },
+    {
+      category: "Toiletries",
+      items: [
+        "Toothbrush and toothpaste",
+        "Shampoo and soap",
+        "Deodorant",
+        "Sunscreen",
+        "Hand sanitizer",
+        "Basic first aid supplies"
+      ]
+    },
+    {
+      category: "Technology",
+      items: [
+        "Smartphone and charger",
+        "Camera (optional)",
+        "Power adapter",
+        "Portable battery pack",
+        "Headphones"
+      ]
+    },
+    {
+      category: "Backpacker Essentials",
+      items: [
+        "Reusable water bottle",
+        "Day pack",
+        "Lock for hostel lockers",
+        "Quick-dry towel",
+        "Eye mask and earplugs",
+        "Multi-tool or pocket knife"
+      ]
+    }
+  ];
+  
+  return basicPackingList;
+}
+
+/**
+ * Completes the itinerary by merging all the parts
+ */
+export function mergeItineraryParts(schedulePart: any, budgetPart: any, tipsPart: any, selections: UserSelections): ItineraryResult {
+  const packingList = getDefaultPackingList(selections.destination, selections.preferences);
+  
+  // Create the complete itinerary by merging all parts
+  const completeItinerary: ItineraryResult = {
+    destination: schedulePart.destination || selections.destination,
+    summary: schedulePart.summary || `A ${selections.preferences.budgetLevel} trip to ${selections.destination}.`,
+    schedule: schedulePart.schedule || [],
+    budget: budgetPart.budget || {
+      accommodation: { totalCost: "N/A", perNight: "N/A", details: "Budget accommodation" },
+      food: { totalCost: "N/A", perDay: "N/A", details: "Local food options" },
+      activities: { totalCost: "N/A", details: ["Various activities"] },
+      transportation: { totalCost: "N/A", details: ["Local transportation"] },
+      miscellaneous: { totalCost: "N/A", details: ["Miscellaneous expenses"] },
+      totalBudget: "N/A"
+    },
+    packingList: packingList,
+    localTips: tipsPart.localTips || [],
+    transportRecommendations: tipsPart.transportRecommendations || [
+      "Use public transportation when possible to save money",
+      "Consider walking for short distances",
+      "Research transportation passes for better value"
+    ]
+  };
+  
+  return completeItinerary;
 }
