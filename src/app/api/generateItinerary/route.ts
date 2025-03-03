@@ -1,97 +1,96 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { buildItineraryPrompt } from "@/lib/itineraryPrompt";
+import { UserSelections } from "@/lib/types";
 import axios from 'axios';
-import { buildItineraryPrompt, parseItineraryResponse } from "@/lib/itineraryPrompt";
-import { UserSelections, ItineraryResult } from "@/lib/types";
 
-// Base API URL for Gemini
-const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
-const DEFAULT_MODEL = 'gemini-1.5-flash';
+// Use Edge Runtime for improved performance with streaming
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
     // Parse the request body
     const userSelections: UserSelections = await request.json();
     
-    // Validate required fields
-    if (!userSelections.destination || !userSelections.preferences.startDate || !userSelections.preferences.endDate) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-    
-    console.log(`Generating itinerary for ${userSelections.destination} with ${userSelections.selectedActivities.length} activities`);
-    
-    // Build the prompt for Gemini API
-    const promptText = buildItineraryPrompt(userSelections);
-    
-    // Get API key
-    const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-    if (!API_KEY) {
-      throw new Error("Gemini API key is not configured");
-    }
-    
-    // Construct API URL
-    const apiUrl = `${API_BASE_URL}/models/${DEFAULT_MODEL}:generateContent`;
-    
-    // Build payload
-    const payload = {
-      contents: [
-        {
-          parts: [
-            {
-              text: promptText
+    // Create a new ReadableStream to stream the response
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Build the prompt for Gemini API
+          const promptText = buildItineraryPrompt(userSelections);
+          
+          // Get API key
+          const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+          if (!API_KEY) {
+            throw new Error("Gemini API key is not configured");
+          }
+          
+          // Construct API URL - Use Gemini 1.5 Flash for faster response
+          const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;
+          
+          // Build payload
+          const payload = {
+            contents: [{ parts: [{ text: promptText }] }],
+            generationConfig: {
+              temperature: 0.4,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 8192
             }
-          ]
+          };
+          
+          // Make the API call
+          const response = await axios({
+            url: apiUrl,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            params: { key: API_KEY },
+            data: payload
+          });
+          
+          // Extract the text response and parse JSON
+          const text = response.data.candidates[0].content.parts[0].text;
+          const jsonMatch = text.match(/{[\s\S]*}/);
+          
+          if (!jsonMatch) {
+            throw new Error("Invalid response format");
+          }
+          
+          const itineraryResult = JSON.parse(jsonMatch[0]);
+          
+          // Send only the final result
+          controller.enqueue(encoder.encode(JSON.stringify(itineraryResult)));
+          
+          // Close the stream
+          controller.close();
+        } catch (error: any) {
+          // Send error message to client
+          controller.enqueue(encoder.encode(JSON.stringify({
+            error: error.message || "Failed to generate itinerary"
+          })));
+          controller.close();
         }
-      ],
-      generationConfig: {
-        temperature: 0.4,   // Lower temperature for more structured output
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 8192  // Need a larger token limit for detailed itineraries
       }
-    };
-    
-    // Make the API call
-    console.log(`Sending request to Gemini API (${DEFAULT_MODEL}) to generate itinerary...`);
-    const response = await axios({
-      url: apiUrl,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      params: { key: API_KEY },
-      data: payload
     });
     
-    console.log("Received response from Gemini API, parsing...");
-    
-    // Extract the text response
-    const text = response.data.candidates[0].content.parts[0].text;
-    
-    // Parse and validate response
-    const itineraryResult = parseItineraryResponse(text);
-    
-    console.log("Successfully generated itinerary with", 
-      itineraryResult.schedule.length, "days,",
-      itineraryResult.packingList.length, "packing categories, and",
-      itineraryResult.localTips.length, "local tips");
-    
-    return NextResponse.json({ data: itineraryResult });
+    // Return a streaming response
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+    });
     
   } catch (error: any) {
-    console.error("Error generating itinerary:", error);
-    
-    const errorMessage = error.message || "Unknown error";
-    const statusCode = 
-      errorMessage.includes("not configured") ? 500 :
-      errorMessage.includes("rate limit") ? 429 : 500;
-    
-    return NextResponse.json(
-      { 
-        error: "Failed to generate itinerary", 
-        details: errorMessage
-      },
-      { status: statusCode }
+    // Handle initial errors before streaming begins
+    return new Response(
+      JSON.stringify({ error: error.message || "Unknown error occurred" }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
   }
 }
+
+// Text encoder for the stream
+const encoder = new TextEncoder();
