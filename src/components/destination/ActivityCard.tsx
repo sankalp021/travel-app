@@ -1,6 +1,6 @@
 import React, { JSX } from 'react';
 import { Activity } from "@/lib/types";
-import { FiCamera, FiMapPin, FiCompass, FiCoffee, FiMusic } from "react-icons/fi";
+import { FiCamera, FiMapPin, FiCompass, FiCoffee, FiMusic, FiCheckCircle } from "react-icons/fi";
 
 interface ActivityCardProps {
   activity: Activity;
@@ -39,6 +39,15 @@ export default function ActivityCard({ activity, selected = false, onSelect }: A
       }`}
       onClick={onSelect}
     >
+      {/* Selection indicator */}
+      {selected && (
+        <div className="absolute top-3 right-3 z-10">
+          <div className="bg-blue-500 rounded-full w-6 h-6 flex items-center justify-center">
+            <FiCheckCircle className="w-4 h-4 text-white" />
+          </div>
+        </div>
+      )}
+      
       {/* Glowing effect for selected cards */}
       {selected && (
         <div className="absolute inset-0 -z-10 bg-blue-900/10 blur-md rounded-xl"></div>
@@ -46,7 +55,7 @@ export default function ActivityCard({ activity, selected = false, onSelect }: A
       
       <div className="p-5">
         <div className="flex justify-between items-start">
-          <h3 className="font-semibold text-gray-100">{activity.name}</h3>
+          <h3 className="font-semibold text-gray-100 pr-6">{activity.name}</h3>
           <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${categoryColor}`}>
             {icon}
             {activity.category}

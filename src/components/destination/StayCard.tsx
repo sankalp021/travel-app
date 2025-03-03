@@ -1,6 +1,6 @@
 import { Stay } from "@/lib/types";
 import { JSX } from "react";
-import { FiHome, FiWifi, FiCoffee, FiCheckSquare } from "react-icons/fi";
+import { FiHome, FiWifi, FiCoffee, FiCheckSquare, FiCheck } from "react-icons/fi";
 
 interface StayCardProps {
   stay: Stay;
