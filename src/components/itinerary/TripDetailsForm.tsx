@@ -52,9 +52,7 @@ export default function TripDetailsForm({
     initialPreferences?.travelStyle || 'balanced'
   );
   const [interests, setInterests] = useState<string[]>(initialPreferences?.interests || ["culture"]);
-  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>(
-    initialPreferences?.dietaryRestrictions || []
-  );
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>(initialPreferences?.dietaryRestrictions || []);
   const [additionalNotes, setAdditionalNotes] = useState(initialPreferences?.additionalNotes || "");
   
   // Form validation
@@ -162,17 +160,23 @@ export default function TripDetailsForm({
               <label htmlFor="startDate" className="block text-sm text-gray-400 mb-1">
                 Start Date
               </label>
-              <input
-                type="date"
-                id="startDate"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                min={today}
-                className={`w-full p-3 border bg-gray-900/80 rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                  errors.startDate ? 'border-red-500' : 'border-gray-700'
-                }`}
-                disabled={isLoading}
-              />
+              <div className={`flex items-center rounded-lg border ${
+                errors.startDate ? 'border-red-500' : 'border-gray-700'
+              } bg-gray-900/80 overflow-hidden`}>
+                <div className="bg-gray-800 p-3 border-r border-gray-700">
+                  <FiCalendar className="text-indigo-400 w-5 h-5" />
+                </div>
+                <input
+                  type="date"
+                  id="startDate"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  min={today}
+                  className="w-full p-3 bg-transparent focus:outline-none focus:ring-0 text-gray-300"
+                  disabled={isLoading}
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
               {errors.startDate && (
                 <p className="mt-1 text-sm text-red-400">{errors.startDate}</p>
               )}
@@ -182,17 +186,23 @@ export default function TripDetailsForm({
               <label htmlFor="endDate" className="block text-sm text-gray-400 mb-1">
                 End Date
               </label>
-              <input
-                type="date"
-                id="endDate"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate || today}
-                className={`w-full p-3 border bg-gray-900/80 rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-                  errors.endDate ? 'border-red-500' : 'border-gray-700'
-                }`}
-                disabled={isLoading}
-              />
+              <div className={`flex items-center rounded-lg border ${
+                errors.endDate ? 'border-red-500' : 'border-gray-700'
+              } bg-gray-900/80 overflow-hidden`}>
+                <div className="bg-gray-800 p-3 border-r border-gray-700">
+                  <FiCalendar className="text-indigo-400 w-5 h-5" />
+                </div>
+                <input
+                  type="date"
+                  id="endDate"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || today}
+                  className="w-full p-3 bg-transparent focus:outline-none focus:ring-0 text-gray-300"
+                  disabled={isLoading}
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
               {errors.endDate && (
                 <p className="mt-1 text-sm text-red-400">{errors.endDate}</p>
               )}
