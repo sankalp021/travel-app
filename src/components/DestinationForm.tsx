@@ -44,20 +44,20 @@ export default function DestinationForm({ onSubmit, isLoading }: DestinationForm
         
         <div className="relative p-8 z-10">
           <div className="flex justify-center mb-6">
-            <div className="relative h-16 w-16 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-full flex items-center justify-center shadow-lg shadow-blue-800/30">
+            <div className="relative h-16 w-16 ">
               <Image 
-                src="/backpack.svg"
-                alt="Backpacker Logo" 
-                width={32}
-                height={32}
-                className="text-white"
+              src="/abc.png"
+              alt="Backpacker Logo" 
+              width={48}
+              height={48}
+              className="text-white"
               />
-              <div className="absolute -inset-1 bg-blue-500/20 rounded-full blur-sm"></div>
+              {/* <div className="absolute -inset-1 bg-blue-500/20 rounded-full blur-sm"></div> */}
             </div>
           </div>
           
           <h1 className="text-3xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">
-            Backpacker&apos;s Compass
+            Mondee Compass
           </h1>
           <p className="text-gray-400 text-center mb-8">
             Discover your next adventure with AI

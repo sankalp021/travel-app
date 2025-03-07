@@ -64,11 +64,11 @@ export default function Home() {
           <div className="bg-blue-900/30 p-1.5 rounded-full text-blue-400">
             <FiGlobe className="w-4 h-4" />
           </div>
-          <span className="text-blue-400 text-sm font-medium">AI-Powered Travel Guide</span>
+          <span className="text-blue-400 text-sm font-medium">Agentic AI Itinerary Planner Demo (Work in progress)</span>
         </div>
         
         <h1 className="text-3xl sm:text-5xl font-bold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-blue-100 to-gray-200">
-          Backpacker&apos;s Compass
+          Mondee&apos;s Compass
         </h1>
         <p className="text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">
           Discover unique destinations, plan your journey, and connect with fellow travelers
@@ -160,7 +160,11 @@ export default function Home() {
       </main>
       
       <footer className="max-w-7xl mx-auto mt-16 text-center text-gray-500 text-sm">
-        <p>Powered by AI · Made for backpackers · <span className="text-blue-500">v1.0</span></p>
+        <> Presented by {" "}
+          <a href="https://rbdesigntech.com/" className="hover:text-blue-400 transition-colors">RBDesignTech</a>
+          {" / "}
+          <a href="https://startupcrafters.com/" className="hover:text-blue-400 transition-colors">StartupCrafters</a>
+        </> For Mondee <span className="text-blue-500">v1.0</span>
       </footer>
     </div>
   );
