@@ -6,12 +6,10 @@ import {
   FiCalendar, 
   FiDollarSign, 
   FiBriefcase, 
-  FiMapPin, 
-  FiShare2, 
-  FiDownload,
-  FiPrinter,
-  FiArrowLeft
+  FiMapPin,
+  FiMic
 } from "react-icons/fi";
+import { FaWhatsapp, FaTelegram, FaWeixin } from "react-icons/fa";
 import ItinerarySchedule from "./ItinerarySchedule";
 import ItineraryBudget from "./ItineraryBudget";
 import ItineraryPacking from "./ItineraryPacking";
@@ -44,34 +42,32 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
           </div>
           
           <div className="flex gap-2">
-            {onBack && (
-              <button 
-                onClick={onBack}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-gray-300 hover:bg-gray-800 transition-colors"
-              >
-                <FiArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </button>
-            )}
+            <button 
+              className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-gray-300 hover:bg-gray-800 transition-colors"
+              title="Talk to AI"
+            >
+              <FiMic className="w-4 h-4" />
+              <span>Talk to AI</span>
+            </button>
             
             <div className="flex gap-2">
               <button 
-                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-gray-300 hover:bg-gray-800 transition-colors"
-                title="Share Itinerary"
+                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-green-400 hover:bg-gray-800 transition-colors"
+                title="Share via WhatsApp"
               >
-                <FiShare2 className="w-4 h-4" />
+                <FaWhatsapp className="w-8 h-8" />
               </button>
               <button 
-                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-gray-300 hover:bg-gray-800 transition-colors"
-                title="Download as PDF"
+                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-blue-400 hover:bg-gray-800 transition-colors"
+                title="Share via Telegram"
               >
-                <FiDownload className="w-4 h-4" />
+                <FaTelegram className="w-8 h-8" />
               </button>
               <button 
-                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-gray-300 hover:bg-gray-800 transition-colors"
-                title="Print Itinerary"
+                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-green-500 hover:bg-gray-800 transition-colors"
+                title="Share via WeChat"
               >
-                <FiPrinter className="w-4 h-4" />
+                <FaWeixin className="w-8 h-8" />
               </button>
             </div>
           </div>
