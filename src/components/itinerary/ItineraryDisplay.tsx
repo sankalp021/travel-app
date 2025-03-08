@@ -109,22 +109,22 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
           </div>
           
           <div className="flex gap-2">
-            <button 
+            {/* <button 
               className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-gray-300 hover:bg-gray-800 transition-colors"
               title="Talk to AI"
             >
               <FiMic className="w-4 h-4" />
               <span>Talk to AI</span>
-            </button>
+            </button> */}
             
-            <button 
+            {/* <button 
               className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-teal-300 hover:bg-gray-800 transition-colors"
               title="Save Itinerary as JSON"
               onClick={downloadItinerary}
             >
               <FiDownload className="w-4 h-4" />
               <span>Save JSON</span>
-            </button>
+            </button> */}
             
             <button 
               className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-blue-300 hover:bg-gray-800 transition-colors"
@@ -132,8 +132,8 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
               onClick={emailItinerary}
               disabled={isEmailSending}
             >
-              <FiMail className="w-4 h-4" />
-              <span>{isEmailSending ? "Sending..." : "Email"}</span>
+              <FiMail className="w-8 h-8" />
+              
             </button>
             
             <div className="flex gap-2">
