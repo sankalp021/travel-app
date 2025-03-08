@@ -7,7 +7,9 @@ import {
   FiDollarSign, 
   FiBriefcase, 
   FiMapPin,
-  FiMic
+  FiMic,
+  FiDownload,
+  FiMail
 } from "react-icons/fi";
 import { FaWhatsapp, FaTelegram, FaWeixin } from "react-icons/fa";
 import ItinerarySchedule from "./ItinerarySchedule";
@@ -22,6 +24,71 @@ interface ItineraryDisplayProps {
 
 export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplayProps) {
   const [activeTab, setActiveTab] = useState<'schedule' | 'budget' | 'packing' | 'tips'>('schedule');
+  const [isEmailSending, setIsEmailSending] = useState(false);
+
+  // Function to download itinerary as JSON file
+  const downloadItinerary = () => {
+    try {
+      // Convert the itinerary object to a JSON string
+      const itineraryJson = JSON.stringify(itinerary, null, 2);
+      
+      // Create a blob from the JSON string
+      const blob = new Blob([itineraryJson], { type: 'application/json' });
+      
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary link element to trigger the download
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Set the download filename
+      const filename = `${itinerary.destination.replace(/\s+/g, '_')}_itinerary.json`;
+      link.download = filename;
+      
+      // Append link to body, click it, and remove it
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Revoke the URL to free up memory
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading itinerary:', error);
+      alert('Failed to download itinerary data');
+    }
+  };
+
+  // Function to send the itinerary via email
+  const emailItinerary = async () => {
+    try {
+      setIsEmailSending(true);
+      
+      const response = await fetch('/api/sendItineraryEmail', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itineraryData: itinerary,
+          destinationName: itinerary.destination,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Itinerary sent successfully to xyz@gmail.com');
+      } else {
+        throw new Error(result.error || 'Failed to send email');
+      }
+    } catch (error: any) {
+      console.error('Error emailing itinerary:', error);
+      alert(`Failed to send email: ${error.message}`);
+    } finally {
+      setIsEmailSending(false);
+    }
+  };
 
   return (
     <div className="bg-gray-950/70 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
@@ -48,6 +115,25 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
             >
               <FiMic className="w-4 h-4" />
               <span>Talk to AI</span>
+            </button>
+            
+            <button 
+              className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-teal-300 hover:bg-gray-800 transition-colors"
+              title="Save Itinerary as JSON"
+              onClick={downloadItinerary}
+            >
+              <FiDownload className="w-4 h-4" />
+              <span>Save JSON</span>
+            </button>
+            
+            <button 
+              className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-blue-300 hover:bg-gray-800 transition-colors"
+              title="Email Itinerary "
+              onClick={emailItinerary}
+              disabled={isEmailSending}
+            >
+              <FiMail className="w-4 h-4" />
+              <span>{isEmailSending ? "Sending..." : "Email"}</span>
             </button>
             
             <div className="flex gap-2">
