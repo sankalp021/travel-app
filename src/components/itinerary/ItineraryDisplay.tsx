@@ -9,7 +9,8 @@ import {
   FiMapPin,
   FiMic,
   FiDownload,
-  FiMail
+  FiMail,
+  FiX
 } from "react-icons/fi";
 import { FaWhatsapp, FaTelegram, FaWeixin } from "react-icons/fa";
 import ItinerarySchedule from "./ItinerarySchedule";
@@ -22,9 +23,21 @@ interface ItineraryDisplayProps {
   onBack?: () => void;
 }
 
+interface UserContactInfo {
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplayProps) {
   const [activeTab, setActiveTab] = useState<'schedule' | 'budget' | 'packing' | 'tips'>('schedule');
   const [isEmailSending, setIsEmailSending] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [contactInfo, setContactInfo] = useState<UserContactInfo>({
+    name: '',
+    email: '',
+    phone: ''
+  });
 
   // Function to download itinerary as JSON file
   const downloadItinerary = () => {
@@ -59,8 +72,24 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
     }
   };
 
-  // Function to send the itinerary via email
-  const emailItinerary = async () => {
+  // Handle opening the email modal
+  const handleOpenEmailModal = () => {
+    setIsEmailModalOpen(true);
+  };
+
+  // Handle input change for contact form
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setContactInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle form submission
+  const handleSubmitEmailForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
       setIsEmailSending(true);
       
@@ -72,13 +101,15 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
         body: JSON.stringify({
           itineraryData: itinerary,
           destinationName: itinerary.destination,
+          userContactInfo: contactInfo,
         }),
       });
       
       const result = await response.json();
       
       if (result.success) {
-        alert('Itinerary sent successfully to xyz@gmail.com');
+        alert(`Itinerary sent successfully to ${contactInfo.email}`);
+        setIsEmailModalOpen(false);
       } else {
         throw new Error(result.error || 'Failed to send email');
       }
@@ -128,12 +159,11 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
             
             <button 
               className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-blue-300 hover:bg-gray-800 transition-colors"
-              title="Email Itinerary "
-              onClick={emailItinerary}
+              title="Email Itinerary"
+              onClick={handleOpenEmailModal}
               disabled={isEmailSending}
             >
               <FiMail className="w-8 h-8" />
-              
             </button>
             
             <div className="flex gap-2">
@@ -223,6 +253,86 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
           />
         )}
       </div>
+
+      {/* Email Modal */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-100">Send Itinerary by Email</h2>
+              <button 
+                onClick={() => setIsEmailModalOpen(false)}
+                className="text-gray-400 hover:text-gray-200"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-gray-400 mb-4">
+              Please provide your contact information to receive the itinerary by email.
+            </p>
+
+            <form onSubmit={handleSubmitEmailForm}>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={contactInfo.name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={contactInfo.email}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-300 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={contactInfo.phone}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <button
+                  type="submit"
+                  disabled={isEmailSending}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isEmailSending ? "Sending..." : "Send Itinerary"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
