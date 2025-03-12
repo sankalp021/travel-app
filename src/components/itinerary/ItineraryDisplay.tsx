@@ -10,7 +10,8 @@ import {
   FiMic,
   FiDownload,
   FiMail,
-  FiX
+  FiX,
+  FiInfo
 } from "react-icons/fi";
 import { FaWhatsapp, FaTelegram, FaWeixin } from "react-icons/fa";
 import ItinerarySchedule from "./ItinerarySchedule";
@@ -29,15 +30,21 @@ interface UserContactInfo {
   phone: string;
 }
 
+type ShareSource = 'email' | 'telegram';
+
 export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplayProps) {
   const [activeTab, setActiveTab] = useState<'schedule' | 'budget' | 'packing' | 'tips'>('schedule');
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [shareSource, setShareSource] = useState<ShareSource>('email');
   const [contactInfo, setContactInfo] = useState<UserContactInfo>({
     name: '',
     email: '',
     phone: ''
   });
+
+  // Telegram bot URL - replace with your actual chatbot URL
+  const TELEGRAM_BOT_URL = "https://t.me/rbdesignflightassistantbot";
 
   // Function to download itinerary as JSON file
   const downloadItinerary = () => {
@@ -73,7 +80,8 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
   };
 
   // Handle opening the email modal
-  const handleOpenEmailModal = () => {
+  const handleOpenEmailModal = (source: ShareSource = 'email') => {
+    setShareSource(source);
     setIsEmailModalOpen(true);
   };
 
@@ -110,6 +118,11 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
       if (result.success) {
         alert(`Itinerary sent successfully to ${contactInfo.email}`);
         setIsEmailModalOpen(false);
+        
+        // If the share source was Telegram, redirect to the Telegram bot
+        if (shareSource === 'telegram') {
+          window.open(TELEGRAM_BOT_URL, '_blank');
+        }
       } else {
         throw new Error(result.error || 'Failed to send email');
       }
@@ -119,6 +132,11 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
     } finally {
       setIsEmailSending(false);
     }
+  };
+
+  // Function to handle features under development
+  const handleFeatureInDevelopment = (feature: string) => {
+    alert(`The ${feature} sharing feature is currently under development and will be available soon.`);
   };
 
   return (
@@ -160,7 +178,7 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
             <button 
               className="flex items-center gap-2 px-4 py-2 border border-gray-700 rounded-lg bg-gray-900/50 text-blue-300 hover:bg-gray-800 transition-colors"
               title="Email Itinerary"
-              onClick={handleOpenEmailModal}
+              onClick={() => handleOpenEmailModal('email')}
               disabled={isEmailSending}
             >
               <FiMail className="w-8 h-8" />
@@ -168,21 +186,28 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
             
             <div className="flex gap-2">
               <button 
-                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-green-400 hover:bg-gray-800 transition-colors"
-                title="Share via WhatsApp"
+                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-green-400/50 hover:bg-gray-800 transition-colors opacity-60  relative"
+                title="WhatsApp sharing (coming soon)"
+                onClick={() => handleFeatureInDevelopment("WhatsApp")}
               >
+                <div className="absolute -bottom-1 -right-2 bg-gray-900 text-xs text-white px-1.5 py-0.5 rounded-full">X</div>
                 <FaWhatsapp className="w-8 h-8" />
               </button>
+
               <button 
                 className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-blue-400 hover:bg-gray-800 transition-colors"
-                title="Share via Telegram"
+                onClick={() => handleOpenEmailModal('telegram')}
+                title="Chat with our Telegram Chatbot"
               >
                 <FaTelegram className="w-8 h-8" />
               </button>
+
               <button 
-                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-green-500 hover:bg-gray-800 transition-colors"
-                title="Share via WeChat"
+                className="p-2 border border-gray-700 rounded-lg bg-gray-900/50 text-green-500/50 hover:bg-gray-800 transition-colors opacity-60 relative"
+                title="WeChat sharing (coming soon)"
+                onClick={() => handleFeatureInDevelopment("WeChat")}
               >
+                <div className="absolute -bottom-2 -right-2 bg-gray-900 text-xs text-white px-1.5 py-0.5 rounded-full">X</div>
                 <FaWeixin className="w-8 h-8" />
               </button>
             </div>
@@ -259,7 +284,11 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-xl w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-100">Send Itinerary by Email</h2>
+              <h2 className="text-xl font-semibold text-gray-100">
+                {shareSource === 'telegram' 
+                  ? 'Share via Telegram & Email'
+                  : 'Send Itinerary by Email'}
+              </h2>
               <button 
                 onClick={() => setIsEmailModalOpen(false)}
                 className="text-gray-400 hover:text-gray-200"
@@ -269,7 +298,9 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
             </div>
 
             <p className="text-gray-400 mb-4">
-              Please provide your contact information to receive the itinerary by email.
+              {shareSource === 'telegram'
+                ? 'Please provide your contact information to receive the itinerary and connect with our Telegram chatbot.'
+                : 'Please provide your contact information to receive the itinerary by email.'}
             </p>
 
             <form onSubmit={handleSubmitEmailForm}>
@@ -326,7 +357,11 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
                   disabled={isEmailSending}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isEmailSending ? "Sending..." : "Send Itinerary"}
+                  {isEmailSending 
+                    ? "Sending..." 
+                    : shareSource === 'telegram' 
+                      ? "Send & Continue to Telegram" 
+                      : "Send Itinerary"}
                 </button>
               </div>
             </form>
