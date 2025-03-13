@@ -126,6 +126,20 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const speechSynthesisRef = useRef<SpeechSynthesis | null>(null);
   
+  // Add refs for tracking speech inactivity
+  const lastSpeechTimeRef = useRef<number>(Date.now());
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Function to stop recording after inactivity with improved logging
+  const stopRecordingAfterInactivity = () => {
+    if (isRecording && recognitionRef.current) {
+      const inactiveTime = Date.now() - lastSpeechTimeRef.current;
+      console.log(`Stopping recording due to inactivity of ${inactiveTime}ms`);
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+  
   // Initialize Speech Recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -139,6 +153,22 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
         recognition.lang = 'en-US';
         
         recognition.onresult = (event: { results: string | any[]; }) => {
+          // Reset inactivity timer whenever we get speech input
+          const now = Date.now();
+          const timeSinceLastSpeech = now - lastSpeechTimeRef.current;
+          lastSpeechTimeRef.current = now;
+          
+          console.log(`Speech detected, ${timeSinceLastSpeech}ms since last speech`);
+          
+          // Clear any existing timeout and set a new one
+          if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current);
+          }
+          
+          inactivityTimeoutRef.current = setTimeout(() => {
+            stopRecordingAfterInactivity();
+          }, 4000); // 4 seconds
+          
           let currentTranscript = '';
           let interimText = '';
           
@@ -157,10 +187,20 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
           console.error('Speech recognition error:', event.error);
           setIsRecording(false);
+          // Clear timeout on error
+          if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current);
+            inactivityTimeoutRef.current = null;
+          }
         };
         
         recognition.onend = () => {
           setIsRecording(false);
+          // Clear timeout when recording ends
+          if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current);
+            inactivityTimeoutRef.current = null;
+          }
         };
         
         recognitionRef.current = recognition;
@@ -173,6 +213,10 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
+      }
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+        inactivityTimeoutRef.current = null;
       }
     };
   }, []);
@@ -194,10 +238,23 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
     if (isRecording) {
       recognitionRef.current.stop();
       setIsRecording(false);
+      // Clear any pending timeout
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+        inactivityTimeoutRef.current = null;
+      }
     } else {
       setTranscript('');
       recognitionRef.current.start();
       setIsRecording(true);
+      // Start the inactivity timer
+      lastSpeechTimeRef.current = Date.now();
+      inactivityTimeoutRef.current = setTimeout(() => {
+        stopRecordingAfterInactivity();
+      }, 4000); // Fix: Changed from 200ms to 4000ms (4 seconds) to match the timeout in onresult
+      
+      // Log when we start recording
+      console.log("Recording started, timeout set for 4 seconds of inactivity");
     }
   };
   
@@ -314,6 +371,17 @@ export default function ItineraryDisplay({ itinerary, onBack }: ItineraryDisplay
   const handleAskAI = async () => {
     if (!transcript.trim()) {
       return;
+    }
+    
+    // Stop recording if it's active when sending a message
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+      // Clear any pending inactivity timeout
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+        inactivityTimeoutRef.current = null;
+      }
     }
     
     // Add user message to conversation
