@@ -12,8 +12,7 @@ export default function Home() {
   const [destination, setDestination] = useState("");
   const [destinationData, setDestinationData] = useState<DestinationData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showItineraryFlow, setShowItineraryFlow] = useState(false);
-
+  
   const handleDestinationSubmit = async (destination: string) => {
     setDestination(destination);
     setIsLoading(true);
@@ -43,11 +42,6 @@ export default function Home() {
 
   const handleReset = () => {
     setDestinationData(null);
-    setShowItineraryFlow(false);
-  };
-
-  const startItineraryPlanning = () => {
-    setShowItineraryFlow(true);
   };
 
   // Animation variants
@@ -90,47 +84,7 @@ export default function Home() {
             </motion.div>
           )}
 
-          {destinationData && !showItineraryFlow && (
-            <motion.div
-              key="destination-results"
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              variants={pageVariants}
-              transition={{ duration: 0.3 }}
-              className="backdrop-blur-sm bg-gray-950/70 border border-gray-800 rounded-2xl p-6 shadow-xl text-center"
-            >
-              <div className="inline-flex items-center gap-2 bg-blue-900/30 text-blue-300 text-sm px-3 py-1.5 rounded-full mb-4">
-                <FiMapPin className="w-4 h-4" />
-                {destination}
-              </div>
-              <h2 className="text-2xl font-bold mb-3 text-gray-100">
-                Destination Information Ready!
-              </h2>
-              <p className="text-gray-400 max-w-lg mx-auto mb-6">
-                We've gathered details about {destinationData.activities.length} activities, 
-                {destinationData.stays.length} accommodations, and more. 
-                Would you like to create a personalized itinerary for your trip to {destination}?
-              </p>
-              
-              <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
-                <button 
-                  onClick={handleReset}
-                  className="px-5 py-2.5 border border-gray-700 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
-                >
-                  Choose Different Destination
-                </button>
-                <button 
-                  onClick={startItineraryPlanning}
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-lg font-medium transition-all"
-                >
-                  Create My Itinerary
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {destinationData && showItineraryFlow && (
+          {destinationData && (
             <motion.div
               key="itinerary-workflow"
               initial="initial"
