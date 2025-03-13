@@ -1,0 +1,56 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextResponse } from 'next/server';
+
+export async function POST(request: Request) {
+  try {
+    // Get the API key
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+    }
+
+    // Get the question and itinerary data from the request body
+    const { question, itineraryData } = await request.json();
+    if (!question) {
+      return NextResponse.json({ error: 'Question is required' }, { status: 400 });
+    }
+
+    console.log('Processing question with itinerary context:', question);
+
+    // Initialize the API
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // Create a prompt that includes the itinerary context
+    const contextualPrompt = `
+      You are a travel assistant helping a user with their itinerary to ${itineraryData.destination}.
+      
+      Itinerary Information:
+      - Destination: ${itineraryData.destination}
+      - Duration: ${itineraryData.schedule?.length || 'Unknown'} days
+      - Summary: ${itineraryData.summary || 'Not provided'}
+      
+      The user asks: "${question}"
+      
+      Provide a helpful response that's specific to their itinerary details. If the answer isn't specifically in the itinerary, provide general travel advice about their destination.
+    `;
+
+    // For models, try these options in order if one fails: gemini-pro, gemini-1.0-pro, gemini-1.5-flash
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+    // Generate content with the contextual prompt
+    const result = await model.generateContent(contextualPrompt);
+    const text = result.response.text();
+
+    console.log('Generated contextual response successfully');
+    return NextResponse.json({ answer: text }, { status: 200 });
+  } catch (error) {
+    console.error('Error generating content:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to generate content',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
+  }
+}
