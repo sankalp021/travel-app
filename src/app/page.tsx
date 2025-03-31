@@ -113,13 +113,13 @@ export default function Home() {
         )}
       </main>
       
-      <footer className="max-w-7xl mx-auto mt-16 text-center text-gray-500 text-sm">
+      {/* <footer className="max-w-7xl mx-auto mt-16 text-center text-gray-500 text-sm">
         <> Presented by {" "}
           <a href="https://rbdesigntech.com/" className="hover:text-blue-400 transition-colors">RBDesignTech</a>
           {" / "}
           <a href="https://startupcrafters.com/" className="hover:text-blue-400 transition-colors">StartupCrafters</a>
         </> For Mondee <span className="text-blue-500">v1.0</span>
-      </footer>
+      </footer> */}
     </div>
   );
 }
