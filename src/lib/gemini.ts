@@ -90,7 +90,7 @@ export async function fetchDestinationData(destination: string): Promise<Destina
       console.log("Available models:", models.map(m => m.name));
 
       if (!modelName) {
-        const preferredModels = ['gemini-1.5', 'gemini-1.0-pro', 'gemini-pro', 'gemini-1.5-flash'];
+        const preferredModels = ['gemini-2.5', 'gemini-2.5-pro', 'gemini-pro', 'gemini-1.5-flash'];
         for (const preferred of preferredModels) {
           const found = models.find(m => m.name.includes(preferred));
           if (found) {
