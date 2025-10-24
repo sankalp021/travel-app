@@ -144,7 +144,7 @@ export async function fetchDestinationData(destination: string): Promise<Destina
         temperature: 0.2,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 4096
+        maxOutputTokens: 2048
       }
     };
 
