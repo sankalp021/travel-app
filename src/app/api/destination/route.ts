@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchDestinationData, listAvailableModels } from "@/lib/gemini";
+import { fetchDestinationData } from "@/lib/gemini";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,18 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optionally list models for debugging. Disabled by default to avoid
-    // doubling latency (which can contribute to timeouts in serverless).
-    if (process.env.DEBUG_LIST_MODELS === 'true') {
-      try {
-        console.log("Checking available models...");
-        const models = await listAvailableModels();
-        console.log(`Found ${models.length} available models`);
-      } catch (modelError) {
-        console.error("Failed to list models:", modelError);
-        // Continue anyway, the main function will handle errors
-      }
-    }
+    // Keep this endpoint focused only on fetching destination info to minimize latency.
 
     const data = await fetchDestinationData(destination);
     return NextResponse.json({ data });

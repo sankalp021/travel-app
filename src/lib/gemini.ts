@@ -5,7 +5,10 @@ import { DestinationData } from "./types";
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
 // Timeout for Gemini API calls (ms). Can be overridden with GEMINI_TIMEOUT_MS env var.
 // Keep this conservative to avoid serverless function timeouts (Vercel default can be ~10s).
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 12000;
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 8000;
+// Simple in-memory cache for destination results to reduce repeated upstream calls
+const CACHE_TTL_MS = parseInt(process.env.DESTINATION_CACHE_TTL_MS || '') || 600000; // 10 minutes
+const destinationCache = new Map<string, { data: DestinationData; expiresAt: number }>();
 // Allow overriding the model via env (helpful when certain models are unavailable).
 // Fallback to a conservative model name that historically existed; users should
 // set MODEL_NAME in their environment to a model listed by listAvailableModels().
@@ -82,6 +85,13 @@ export async function fetchDestinationData(destination: string): Promise<Destina
     const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
     if (!API_KEY) {
       throw new Error("Gemini API key is not configured");
+    }
+
+    // Return cached result if available and fresh
+    const cacheKey = destination.trim().toLowerCase();
+    const cached = destinationCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
     }
 
     // Use configured MODEL_NAME when possible, otherwise fall back to DEFAULT_MODEL.
@@ -180,7 +190,10 @@ export async function fetchDestinationData(destination: string): Promise<Destina
       throw new Error("Invalid response format from Gemini");
     }
 
-    return JSON.parse(jsonMatch[0]) as DestinationData;
+    const parsed = JSON.parse(jsonMatch[0]) as DestinationData;
+    // Cache the result
+    destinationCache.set(cacheKey, { data: parsed, expiresAt: Date.now() + CACHE_TTL_MS });
+    return parsed;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
     throw error;
