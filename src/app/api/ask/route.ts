@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   // Use MODEL_NAME env (fallback to gemini-pro). If a model isn't available you'll get an error
   // indicating you should list available models and set MODEL_NAME accordingly.
-  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-2.5-flash';
+  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-2.0-flash';
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
     // Generate content with the contextual prompt

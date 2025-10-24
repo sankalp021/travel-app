@@ -12,7 +12,7 @@ const destinationCache = new Map<string, { data: DestinationData; expiresAt: num
 // Allow overriding the model via env (helpful when certain models are unavailable).
 // Fallback to a conservative model name that historically existed; users should
 // set MODEL_NAME in their environment to a model listed by listAvailableModels().
-const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-2.5-flash';
+const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-2.0-flash';
 
 // Queue system for API requests to respect rate limits
 class RequestQueue {

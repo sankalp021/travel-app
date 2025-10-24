@@ -12,7 +12,7 @@ async function callGeminiAPI(prompt: string, temperature: number = 0.3, maxToken
   if (!API_KEY) {
     throw new Error("Gemini API key is not configured");
   }
-  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-2.5-flash';
+  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-2.0-flash';
   const API_BASE = 'https://generativelanguage.googleapis.com/v1';
   const apiUrl = `${API_BASE}/models/${MODEL_NAME}:generateContent`;
   
