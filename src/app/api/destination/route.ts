@@ -12,14 +12,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Attempt to list models first to verify API connectivity
-    try {
-      console.log("Checking available models...");
-      const models = await listAvailableModels();
-      console.log(`Found ${models.length} available models`);
-    } catch (modelError) {
-      console.error("Failed to list models:", modelError);
-      // Continue anyway, the main function will handle errors
+    // Optionally list models for debugging. Disabled by default to avoid
+    // doubling latency (which can contribute to timeouts in serverless).
+    if (process.env.DEBUG_LIST_MODELS === 'true') {
+      try {
+        console.log("Checking available models...");
+        const models = await listAvailableModels();
+        console.log(`Found ${models.length} available models`);
+      } catch (modelError) {
+        console.error("Failed to list models:", modelError);
+        // Continue anyway, the main function will handle errors
+      }
     }
 
     const data = await fetchDestinationData(destination);

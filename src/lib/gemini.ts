@@ -3,6 +3,8 @@ import { DestinationData } from "./types";
 
 // API Base URL - using v1 instead of v1beta
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
+// Timeout for Gemini API calls (ms). Can be overridden with GEMINI_TIMEOUT_MS env var.
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 15000;
 // Allow overriding the model via env (helpful when certain models are unavailable).
 // Fallback to a conservative model name that historically existed; users should
 // set MODEL_NAME in their environment to a model listed by listAvailableModels().
@@ -63,7 +65,8 @@ export async function listAvailableModels(): Promise<Model[]> {
     const response = await axios({
       url: `${API_BASE_URL}/models`,
       method: 'GET',
-      params: { key: API_KEY }
+      params: { key: API_KEY },
+      timeout: DEFAULT_TIMEOUT_MS
     });
 
     return response.data.models;
@@ -168,7 +171,8 @@ export async function fetchDestinationData(destination: string): Promise<Destina
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           params: { key: API_KEY },
-          data: payload
+          data: payload,
+          timeout: DEFAULT_TIMEOUT_MS * 2 // allow a bit more time for generation
         });
         
         return response.data;

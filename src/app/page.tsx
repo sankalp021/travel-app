@@ -26,8 +26,16 @@ export default function Home() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || "Failed to fetch destination data");
+        // Some error responses might not be JSON (HTML or plain text). Read as text
+        const text = await response.text();
+        let message = text || "Failed to fetch destination data";
+        try {
+          const parsed = JSON.parse(text);
+          message = parsed?.details || parsed?.error || JSON.stringify(parsed);
+        } catch (_) {
+          // not JSON, keep raw text
+        }
+        throw new Error(message);
       }
       
       const result = await response.json();
