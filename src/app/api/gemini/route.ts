@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       const errorData = await geminiResponse.json().catch(() => ({}));
       console.error("Gemini API error response:", errorData);
       if (geminiResponse.status === 404) {
-        return NextResponse.json({ error: `Model ${MODEL_NAME} not found for this API version. Call listAvailableModels() or set MODEL_NAME to a supported model.`, details: errorData }, { status: 404 });
+        return NextResponse.json({ error: `Model ${MODEL_NAME} not found for this API version. Set MODEL_NAME to a supported model.`, details: errorData }, { status: 404 });
       }
       throw new Error(errorData?.error?.message || "Failed to get response from Gemini");
     }

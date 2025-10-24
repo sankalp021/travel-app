@@ -7,37 +7,10 @@ const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
 // Keep this conservative to avoid serverless function timeouts (Vercel default can be ~10s).
 const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 10000;
 // Allow overriding the model via env (helpful when certain models are unavailable).
-// Fallback to a conservative model name that historically existed; users should
-// set MODEL_NAME in their environment to a model listed by listAvailableModels().
+// Fallback to a conservative model name; set MODEL_NAME in your environment to control it.
 const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-2.0-flash';
 
-// Simplified: no internal request queue or cache; keep the call minimal
-
-interface Model {
-  name: string;
-  // Add other properties if needed
-}
-
-export async function listAvailableModels(): Promise<Model[]> {
-  try {
-    const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-    if (!API_KEY) {
-      throw new Error("Gemini API key is not configured");
-    }
-
-    const response = await axios({
-      url: `${API_BASE_URL}/models`,
-      method: 'GET',
-      params: { key: API_KEY },
-      timeout: DEFAULT_TIMEOUT_MS
-    });
-
-    return response.data.models;
-  } catch (error) {
-    console.error("Error listing models:", error);
-    throw error;
-  }
-}
+// Simplified: keep the call minimal
 
 export async function fetchDestinationData(destination: string): Promise<DestinationData> {
   try {

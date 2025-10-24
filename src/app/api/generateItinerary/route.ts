@@ -34,7 +34,7 @@ async function callGeminiAPI(prompt: string, temperature: number = 0.3, maxToken
     data: payload
   });
   if (response.status === 404) {
-    throw new Error(`Model ${MODEL_NAME} not found for this API version. Call listAvailableModels or set process.env.MODEL_NAME to a supported model.`);
+    throw new Error(`Model ${MODEL_NAME} not found for this API version. Set process.env.MODEL_NAME to a supported model.`);
   }
   
   const text = response.data.candidates[0].content.parts[0].text;

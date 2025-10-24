@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       console.error('Error from generative API:', err);
       const msg = err?.message || String(err);
       if (msg.includes('not found') || msg.includes('NOT_FOUND')) {
-        return NextResponse.json({ error: `Model ${MODEL_NAME} not found or unsupported for generateContent. Call listAvailableModels() and set MODEL_NAME to a supported model.` }, { status: 404 });
+        return NextResponse.json({ error: `Model ${MODEL_NAME} not found or unsupported for generateContent. Set MODEL_NAME to a supported model.` }, { status: 404 });
       }
       throw err;
     }
