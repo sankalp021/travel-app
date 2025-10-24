@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchDestinationData } from "@/lib/gemini";
 
+// Run on Edge with higher maxDuration to avoid Node serverless 10s timeouts
+export const runtime = 'edge';
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const { destination } = await request.json();
@@ -24,7 +28,8 @@ export async function POST(request: NextRequest) {
 
     if (errorMessage.includes('not configured')) statusCode = 500;
     else if (errorMessage.includes('rate limit')) statusCode = 429;
-    else if (errorMessage.toLowerCase().includes('timed out') || errorMessage.toLowerCase().includes('timeout')) statusCode = 504;
+  else if (errorMessage.toLowerCase().includes('timed out') || errorMessage.toLowerCase().includes('timeout')) statusCode = 504;
+  else if (errorMessage.toLowerCase().includes('temporarily unavailable') || errorMessage.toLowerCase().includes('overloaded')) statusCode = 503;
 
     return NextResponse.json(
       {
