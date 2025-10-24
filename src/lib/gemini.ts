@@ -5,7 +5,7 @@ import { DestinationData } from "./types";
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
 // Timeout for Gemini API calls (ms). Can be overridden with GEMINI_TIMEOUT_MS env var.
 // Keep this conservative to avoid serverless function timeouts (Vercel default can be ~10s).
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 8000;
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 10000;
 // Simple in-memory cache for destination results to reduce repeated upstream calls
 const CACHE_TTL_MS = parseInt(process.env.DESTINATION_CACHE_TTL_MS || '') || 600000; // 10 minutes
 const destinationCache = new Map<string, { data: DestinationData; expiresAt: number }>();
