@@ -6,53 +6,12 @@ const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
 // Timeout for Gemini API calls (ms). Can be overridden with GEMINI_TIMEOUT_MS env var.
 // Keep this conservative to avoid serverless function timeouts (Vercel default can be ~10s).
 const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 10000;
-// Simple in-memory cache for destination results to reduce repeated upstream calls
-const CACHE_TTL_MS = parseInt(process.env.DESTINATION_CACHE_TTL_MS || '') || 600000; // 10 minutes
-const destinationCache = new Map<string, { data: DestinationData; expiresAt: number }>();
 // Allow overriding the model via env (helpful when certain models are unavailable).
 // Fallback to a conservative model name that historically existed; users should
 // set MODEL_NAME in their environment to a model listed by listAvailableModels().
 const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-2.0-flash';
 
-// Queue system for API requests to respect rate limits
-class RequestQueue {
-  private queue: Array<() => Promise<unknown>> = [];
-  private processing = false;
-  private lastRequestTime = 0;
-  private RATE_LIMIT_DELAY = 1000; // 1 second between requests
-
-  async add<T>(request: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push(async () => {
-        try {
-          const now = Date.now();
-          const timeSinceLastRequest = now - this.lastRequestTime;
-          if (timeSinceLastRequest < this.RATE_LIMIT_DELAY) {
-            await new Promise(r => setTimeout(r, this.RATE_LIMIT_DELAY - timeSinceLastRequest));
-          }
-          this.lastRequestTime = Date.now();
-          const result = await request();
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      });
-      this.process();
-    });
-  }
-
-  private async process() {
-    if (this.processing || this.queue.length === 0) return;
-    this.processing = true;
-    while (this.queue.length > 0) {
-      const request = this.queue.shift();
-      if (request) await request();
-    }
-    this.processing = false;
-  }
-}
-
-const requestQueue = new RequestQueue();
+// Simplified: no internal request queue or cache; keep the call minimal
 
 interface Model {
   name: string;
@@ -85,13 +44,6 @@ export async function fetchDestinationData(destination: string): Promise<Destina
     const API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
     if (!API_KEY) {
       throw new Error("Gemini API key is not configured");
-    }
-
-    // Return cached result if available and fresh
-    const cacheKey = destination.trim().toLowerCase();
-    const cached = destinationCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.data;
     }
 
     // Use configured MODEL_NAME when possible, otherwise fall back to DEFAULT_MODEL.
@@ -139,47 +91,38 @@ export async function fetchDestinationData(destination: string): Promise<Destina
             }
           ]
         }
-      ],
-      generationConfig: {
-        temperature: 0.2,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048
-      }
+      ]
     };
 
-    // Using the RequestQueue to manage API call rate limiting
-    const result = await requestQueue.add(async () => {
-      try {
-        console.log(`Making API request to: ${apiUrl}`);
-        const response = await axios({
-          url: apiUrl,
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          params: { key: API_KEY },
-          data: payload,
-          timeout: DEFAULT_TIMEOUT_MS // use conservative timeout to avoid platform invocation limits
-        });
-        
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          const status = error.response?.status;
-          console.error('Gemini API Error Response:', error.response?.data || error.message);
-          // Timeout / aborted connection -> throw a clear timeout error so the route can return 504
-          if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
-            throw new Error('Gemini request timed out');
-          }
-          if (status === 404) {
-            const msg = `Model not found or not supported for this API/version. Model used: ${modelName}. ` +
-              `Call listAvailableModels() or set process.env.MODEL_NAME to a supported model.`;
-            throw new Error(msg);
-          }
-          throw new Error(`Gemini API error: ${JSON.stringify(error.response?.data || error.message)}`);
+    // Direct single API call (minimal)
+    let result;
+    try {
+      console.log(`Making API request to: ${apiUrl}`);
+      const response = await axios({
+        url: apiUrl,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        params: { key: API_KEY },
+        data: payload,
+        timeout: DEFAULT_TIMEOUT_MS
+      });
+      result = response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        console.error('Gemini API Error Response:', error.response?.data || error.message);
+        if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
+          throw new Error('Gemini request timed out');
         }
-        throw error;
+        if (status === 404) {
+          const msg = `Model not found or not supported for this API/version. Model used: ${modelName}. ` +
+            `Set process.env.MODEL_NAME to a supported model.`;
+          throw new Error(msg);
+        }
+        throw new Error(`Gemini API error: ${JSON.stringify(error.response?.data || error.message)}`);
       }
-    });
+      throw error;
+    }
 
     // Extract the text response from the Gemini API result
     const text = result.candidates[0].content.parts[0].text;
@@ -191,8 +134,6 @@ export async function fetchDestinationData(destination: string): Promise<Destina
     }
 
     const parsed = JSON.parse(jsonMatch[0]) as DestinationData;
-    // Cache the result
-    destinationCache.set(cacheKey, { data: parsed, expiresAt: Date.now() + CACHE_TTL_MS });
     return parsed;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
