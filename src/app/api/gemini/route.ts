@@ -23,8 +23,10 @@ export async function POST(request: Request) {
 
     console.log("Processing question with itinerary context:", question);
     
-    // Direct API call to Gemini
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+  // Direct API call to Gemini (use v1 and env-configured model)
+  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-1.5';
+  const API_BASE = 'https://generativelanguage.googleapis.com/v1';
+  const apiUrl = `${API_BASE}/models/${MODEL_NAME}:generateContent`;
     
     // Prepare the prompt with itinerary context
     const prompt = `
@@ -70,8 +72,11 @@ export async function POST(request: Request) {
     });
     
     if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.json();
+      const errorData = await geminiResponse.json().catch(() => ({}));
       console.error("Gemini API error response:", errorData);
+      if (geminiResponse.status === 404) {
+        return NextResponse.json({ error: `Model ${MODEL_NAME} not found for this API version. Call listAvailableModels() or set MODEL_NAME to a supported model.`, details: errorData }, { status: 404 });
+      }
       throw new Error(errorData?.error?.message || "Failed to get response from Gemini");
     }
     

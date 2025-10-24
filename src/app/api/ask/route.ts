@@ -34,11 +34,23 @@ export async function POST(request: Request) {
       Provide a helpful response that's specific to their itinerary details. If the answer isn't specifically in the itinerary, provide general travel advice about their destination.
     `;
 
-    // For models, try these options in order if one fails: gemini-pro, gemini-1.0-pro, gemini-1.5-flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  // Use MODEL_NAME env (fallback to gemini-pro). If a model isn't available you'll get an error
+  // indicating you should list available models and set MODEL_NAME accordingly.
+  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-pro';
+  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
     // Generate content with the contextual prompt
-    const result = await model.generateContent(contextualPrompt);
+    let result;
+    try {
+      result = await model.generateContent(contextualPrompt);
+    } catch (err: any) {
+      console.error('Error from generative API:', err);
+      const msg = err?.message || String(err);
+      if (msg.includes('not found') || msg.includes('NOT_FOUND')) {
+        return NextResponse.json({ error: `Model ${MODEL_NAME} not found or unsupported for generateContent. Call listAvailableModels() and set MODEL_NAME to a supported model.` }, { status: 404 });
+      }
+      throw err;
+    }
     const text = result.response.text();
 
     console.log('Generated contextual response successfully');

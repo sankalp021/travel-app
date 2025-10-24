@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mondee Compass",
+  title: "Backpackers Compass",
   description: "AI-powered travel itinerary planning app.",
 };
 

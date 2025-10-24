@@ -57,7 +57,7 @@ export default function DestinationForm({ onSubmit, isLoading }: DestinationForm
           </div>
           
           <h1 className="text-3xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">
-            Mondee Compass
+            Backpackers Compass
           </h1>
           <p className="text-gray-400 text-center mb-8">
             Discover your next adventure with AI

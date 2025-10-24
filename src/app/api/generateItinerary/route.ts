@@ -12,8 +12,9 @@ async function callGeminiAPI(prompt: string, temperature: number = 0.3, maxToken
   if (!API_KEY) {
     throw new Error("Gemini API key is not configured");
   }
-  
-  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;
+  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-1.5';
+  const API_BASE = 'https://generativelanguage.googleapis.com/v1';
+  const apiUrl = `${API_BASE}/models/${MODEL_NAME}:generateContent`;
   
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -32,6 +33,9 @@ async function callGeminiAPI(prompt: string, temperature: number = 0.3, maxToken
     params: { key: API_KEY },
     data: payload
   });
+  if (response.status === 404) {
+    throw new Error(`Model ${MODEL_NAME} not found for this API version. Call listAvailableModels or set process.env.MODEL_NAME to a supported model.`);
+  }
   
   const text = response.data.candidates[0].content.parts[0].text;
   const jsonMatch = text.match(/{[\s\S]*}/);

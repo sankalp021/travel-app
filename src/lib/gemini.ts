@@ -3,7 +3,10 @@ import { DestinationData } from "./types";
 
 // API Base URL - using v1 instead of v1beta
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
-const DEFAULT_MODEL = 'gemini-1.5-flash'; // Updated to the latest model name
+// Allow overriding the model via env (helpful when certain models are unavailable).
+// Fallback to a conservative model name that historically existed; users should
+// set MODEL_NAME in their environment to a model listed by listAvailableModels().
+const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-1.5';
 
 // Queue system for API requests to respect rate limits
 class RequestQueue {
@@ -77,30 +80,34 @@ export async function fetchDestinationData(destination: string): Promise<Destina
       throw new Error("Gemini API key is not configured");
     }
 
-    // First, list models to identify a working one
-    let modelName;
+    // Determine which model to use. Priority:
+    // 1. process.env.MODEL_NAME
+    // 2. A preferred model found in the available models list
+    // 3. DEFAULT_MODEL
+    let modelName: string | undefined = process.env.MODEL_NAME;
     try {
       const models = await listAvailableModels();
       console.log("Available models:", models.map(m => m.name));
-      
-      // Look for a suitable model, preferring newer versions
-      const preferredModels = ['gemini-1.5-flash', 'gemini-1.0-pro', 'gemini-pro'];
-      for (const preferred of preferredModels) {
-        const found = models.find(m => m.name.includes(preferred));
-        if (found) {
-          modelName = found.name.split('/').pop(); // Extract just the model name
-          console.log(`Using model: ${modelName}`);
-          break;
+
+      if (!modelName) {
+        const preferredModels = ['gemini-1.5', 'gemini-1.0-pro', 'gemini-pro', 'gemini-1.5-flash'];
+        for (const preferred of preferredModels) {
+          const found = models.find(m => m.name.includes(preferred));
+          if (found) {
+            modelName = found.name.split('/').pop(); // Extract just the model name
+            console.log(`Using discovered model: ${modelName}`);
+            break;
+          }
         }
       }
-      
+
       if (!modelName) {
         modelName = DEFAULT_MODEL;
         console.log(`No preferred model found. Using default: ${modelName}`);
       }
     } catch (error) {
       console.error("Error getting models list, using default:", error);
-      modelName = DEFAULT_MODEL;
+      if (!modelName) modelName = DEFAULT_MODEL;
     }
 
     // Construct the API URL with the selected model
@@ -167,7 +174,13 @@ export async function fetchDestinationData(destination: string): Promise<Destina
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
           console.error('Gemini API Error Response:', error.response?.data);
+          if (status === 404) {
+            const msg = `Model not found or not supported for this API/version. Model used: ${modelName}. ` +
+              `Call listAvailableModels() or set process.env.MODEL_NAME to a supported model.`;
+            throw new Error(msg);
+          }
           throw new Error(`Gemini API error: ${JSON.stringify(error.response?.data || error.message)}`);
         }
         throw error;

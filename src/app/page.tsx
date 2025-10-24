@@ -62,7 +62,7 @@ export default function Home() {
         </div>
         
         <h1 className="text-3xl sm:text-5xl font-bold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-gray-100 via-blue-100 to-gray-200">
-          Mondee Compass
+          Backpackers Compass
         </h1>
         <p className="text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">
           Discover unique destinations, plan your journey, and connect with fellow travelers
@@ -118,7 +118,7 @@ export default function Home() {
           <a href="https://rbdesigntech.com/" className="hover:text-blue-400 transition-colors">RBDesignTech</a>
           {" / "}
           <a href="https://startupcrafters.com/" className="hover:text-blue-400 transition-colors">StartupCrafters</a>
-        </> For Mondee <span className="text-blue-500">v1.0</span>
+        </> For Backpackers <span className="text-blue-500">v1.0</span>
       </footer>
     </div>
   );
