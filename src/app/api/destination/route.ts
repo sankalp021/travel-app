@@ -29,17 +29,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data });
   } catch (error: any) {
     console.error("Error in destination API route:", error);
-    
-    // More detailed error response
+
     const errorMessage = error.message || "Unknown error";
-    const statusCode = 
-      errorMessage.includes("not configured") ? 500 :
-      errorMessage.includes("rate limit") ? 429 : 
-      500;
-    
+    let statusCode = 500;
+
+    if (errorMessage.includes('not configured')) statusCode = 500;
+    else if (errorMessage.includes('rate limit')) statusCode = 429;
+    else if (errorMessage.toLowerCase().includes('timed out') || errorMessage.toLowerCase().includes('timeout')) statusCode = 504;
+
     return NextResponse.json(
-      { 
-        error: "Failed to fetch destination data", 
+      {
+        error: "Failed to fetch destination data",
         details: errorMessage
       },
       { status: statusCode }

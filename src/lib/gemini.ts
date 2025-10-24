@@ -4,7 +4,8 @@ import { DestinationData } from "./types";
 // API Base URL - using v1 instead of v1beta
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
 // Timeout for Gemini API calls (ms). Can be overridden with GEMINI_TIMEOUT_MS env var.
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 15000;
+// Keep this conservative to avoid serverless function timeouts (Vercel default can be ~10s).
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 8000;
 // Allow overriding the model via env (helpful when certain models are unavailable).
 // Fallback to a conservative model name that historically existed; users should
 // set MODEL_NAME in their environment to a model listed by listAvailableModels().
@@ -83,35 +84,10 @@ export async function fetchDestinationData(destination: string): Promise<Destina
       throw new Error("Gemini API key is not configured");
     }
 
-    // Determine which model to use. Priority:
-    // 1. process.env.MODEL_NAME
-    // 2. A preferred model found in the available models list
-    // 3. DEFAULT_MODEL
-    let modelName: string | undefined = process.env.MODEL_NAME;
-    try {
-      const models = await listAvailableModels();
-      console.log("Available models:", models.map(m => m.name));
-
-      if (!modelName) {
-        const preferredModels = ['gemini-2.5', 'gemini-2.5-pro', 'gemini-pro', 'gemini-1.5-flash'];
-        for (const preferred of preferredModels) {
-          const found = models.find(m => m.name.includes(preferred));
-          if (found) {
-            modelName = found.name.split('/').pop(); // Extract just the model name
-            console.log(`Using discovered model: ${modelName}`);
-            break;
-          }
-        }
-      }
-
-      if (!modelName) {
-        modelName = DEFAULT_MODEL;
-        console.log(`No preferred model found. Using default: ${modelName}`);
-      }
-    } catch (error) {
-      console.error("Error getting models list, using default:", error);
-      if (!modelName) modelName = DEFAULT_MODEL;
-    }
+    // Use configured MODEL_NAME when possible, otherwise fall back to DEFAULT_MODEL.
+    // Avoid listing models on every request to reduce latency and chance of function timeouts.
+    let modelName: string = process.env.MODEL_NAME || DEFAULT_MODEL;
+    console.log(`Using model: ${modelName}`);
 
     // Construct the API URL with the selected model
     const apiUrl = `${API_BASE_URL}/models/${modelName}:generateContent`;
@@ -172,14 +148,18 @@ export async function fetchDestinationData(destination: string): Promise<Destina
           headers: { 'Content-Type': 'application/json' },
           params: { key: API_KEY },
           data: payload,
-          timeout: DEFAULT_TIMEOUT_MS * 2 // allow a bit more time for generation
+          timeout: DEFAULT_TIMEOUT_MS // use conservative timeout to avoid platform invocation limits
         });
         
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const status = error.response?.status;
-          console.error('Gemini API Error Response:', error.response?.data);
+          console.error('Gemini API Error Response:', error.response?.data || error.message);
+          // Timeout / aborted connection -> throw a clear timeout error so the route can return 504
+          if (error.code === 'ECONNABORTED' || (error.message && error.message.toLowerCase().includes('timeout'))) {
+            throw new Error('Gemini request timed out');
+          }
           if (status === 404) {
             const msg = `Model not found or not supported for this API/version. Model used: ${modelName}. ` +
               `Call listAvailableModels() or set process.env.MODEL_NAME to a supported model.`;
