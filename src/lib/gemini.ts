@@ -4,7 +4,7 @@ import { DestinationData } from "./types";
 const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
 // Timeout for Gemini API calls (ms). Can be overridden with GEMINI_TIMEOUT_MS env var.
 // Keep this conservative to avoid serverless function timeouts (Vercel default can be ~10s).
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 10000;
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 14000;
 // Allow overriding the model via env (helpful when certain models are unavailable).
 // Fallback to a conservative model name; set MODEL_NAME in your environment to control it.
 const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-2.0-flash-lite';
