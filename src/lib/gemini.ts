@@ -8,7 +8,7 @@ const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1';
 const DEFAULT_TIMEOUT_MS = parseInt(process.env.GEMINI_TIMEOUT_MS || '') || 10000;
 // Allow overriding the model via env (helpful when certain models are unavailable).
 // Fallback to a conservative model name; set MODEL_NAME in your environment to control it.
-const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-2.0-flash';
+const DEFAULT_MODEL = process.env.MODEL_NAME || 'gemini-2.0-flash-lite';
 
 // Simplified: keep the call minimal
 

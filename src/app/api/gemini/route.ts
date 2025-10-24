@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     console.log("Processing question with itinerary context:", question);
     
   // Direct API call to Gemini (use v1 and env-configured model)
-  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-2.0-flash';
+  const MODEL_NAME = process.env.MODEL_NAME || 'gemini-2.0-flash-lite';
   const API_BASE = 'https://generativelanguage.googleapis.com/v1';
   const apiUrl = `${API_BASE}/models/${MODEL_NAME}:generateContent`;
     
